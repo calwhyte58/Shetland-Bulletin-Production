@@ -1,0 +1,45 @@
+{
+  "entities": {
+    "WeeklyReport": {
+      "title": "Weekly Report",
+      "description": "A weekly report containing toxin and phytoplankton maps for Shetland.",
+      "type": "object",
+      "properties": {
+        "weekNumber": {
+          "type": "number",
+          "description": "The week number of the year."
+        },
+        "startDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The start date of the reporting week."
+        },
+        "endDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The end date of the reporting week."
+        },
+        "toxinMapUrl": {
+          "type": "string",
+          "description": "URL to the toxin map image (OA/DTXs/PTXs)."
+        },
+        "phytoMapUrl": {
+          "type": "string",
+          "description": "URL to the phytoplankton map image (Dinophysis Sp.)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the record was created."
+        }
+      },
+      "required": ["weekNumber", "startDate", "endDate", "toxinMapUrl", "phytoMapUrl"]
+    }
+  },
+  "firestore": {
+    "/weeks/{weekId}": {
+      "schema": "WeeklyReport",
+      "description": "Collection of weekly reports."
+    }
+  }
+}

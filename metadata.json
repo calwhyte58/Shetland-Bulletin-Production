@@ -1,0 +1,6 @@
+{
+  "name": "Shetland Bulletin Generator",
+  "description": "A tool for generating and managing weekly Shetland Bulletins on harmful and toxic algae, featuring a sliding 4-week window, historical data view, and PDF export.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

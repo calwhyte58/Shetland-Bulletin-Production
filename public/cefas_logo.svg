@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 50" width="160" height="50">
+  <defs>
+    <linearGradient id="cefasGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00667e"/>
+      <stop offset="100%" stop-color="#0d9488"/>
+    </linearGradient>
+  </defs>
+  <!-- Cefas Stylized Waves Emblem -->
+  <g transform="translate(4, 8)">
+    <rect x="0" y="0" width="34" height="34" rx="6" fill="#f0fdfa" stroke="#0d9488" stroke-width="1.2"/>
+    <!-- Overlapping marine arcs -->
+    <path d="M6 24 C 11 16, 21 16, 28 24 C 23 21, 13 21, 6 24 Z" fill="url(#cefasGrad)"/>
+    <path d="M8 18 C 13 11, 20 11, 26 18 C 21 15, 13 15, 8 18 Z" fill="#0d9488" opacity="0.9"/>
+    <path d="M11 12 C 14 7, 19 7, 23 12 C 19 10, 15 10, 11 12 Z" fill="#14b8a6"/>
+  </g>
+  <!-- Typography -->
+  <text x="44" y="26" font-family="system-ui, -apple-system, sans-serif" font-size="21" font-weight="900" fill="#00667e" letter-spacing="-0.8">Cefas</text>
+  <text x="45" y="36" font-family="system-ui, -apple-system, sans-serif" font-size="5.5" font-weight="700" fill="#0f766e" letter-spacing="0.2">CENTRE FOR ENVIRONMENT,</text>
+  <text x="45" y="43" font-family="system-ui, -apple-system, sans-serif" font-size="5" font-weight="600" fill="#64748b" letter-spacing="0.1">FISHERIES &amp; AQUACULTURE SCIENCE</text>
+</svg>
