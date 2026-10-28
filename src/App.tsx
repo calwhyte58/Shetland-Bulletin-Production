@@ -109,13 +109,166 @@ export const DEFAULT_ANALYSIS_TEXT = {
   }
 };
 
+export function generateSampleReports(): WeeklyReport[] {
+  const types = Object.values(BulletinType);
+  const sampleReports: WeeklyReport[] = [];
+  
+  // Base Monday for week 12 (March 16, 2026)
+  const baseWeek12Monday = new Date(2026, 2, 16);
+  
+  types.forEach(type => {
+    [12, 13, 14, 15, 16].forEach(num => {
+      const weekOffset = num - 12;
+      const start = addWeeks(baseWeek12Monday, weekOffset);
+      const end = addDays(start, 6);
+      const startIso = format(start, "yyyy-MM-dd'T'00:00:00'Z'");
+      const endIso = format(end, "yyyy-MM-dd'T'00:00:00'Z'");
+      const isWindRose = type === BulletinType.WIND_ROSE;
+      
+      sampleReports.push({
+        id: `sample-${type}-${num}`,
+        type: type as BulletinType,
+        weekNumber: num,
+        startDate: startIso,
+        endDate: endIso,
+        targetDate: startIso,
+        toxinMapUrl: `https://picsum.photos/seed/${type}-toxin-${num}/400/400`,
+        phytoMapUrl: `https://picsum.photos/seed/${type}-phyto-${num}/400/400`,
+        additionalMapUrls: Array.from({ length: 12 }).map((_, i) => 
+          `https://picsum.photos/seed/${type}-add${i+1}-${num}/400/400`
+        ),
+        forecastDates: type === BulletinType.FORECAST ? [
+          format(addDays(start, 1), 'yyyy-MM-dd'),
+          format(addDays(start, 2), 'yyyy-MM-dd'),
+          format(addDays(start, 3), 'yyyy-MM-dd')
+        ] : undefined,
+        biotoxinReport: type === BulletinType.ANALYSIS 
+          ? DEFAULT_ANALYSIS_TEXT.biotoxinReport 
+          : undefined,
+        biotoxins: type === BulletinType.ANALYSIS ? { ...DEFAULT_ANALYSIS_TEXT.biotoxins } : undefined,
+        harmfulAlgaeReport: type === BulletinType.ANALYSIS
+          ? DEFAULT_ANALYSIS_TEXT.harmfulAlgaeReport
+          : undefined,
+        harmfulAlgae: type === BulletinType.ANALYSIS ? { ...DEFAULT_ANALYSIS_TEXT.harmfulAlgae } : undefined,
+        trendsForecast: type === BulletinType.ANALYSIS
+          ? DEFAULT_ANALYSIS_TEXT.trendsForecast
+          : undefined,
+        trends: type === BulletinType.ANALYSIS ? { ...DEFAULT_ANALYSIS_TEXT.trends } : undefined,
+        kareniaStatus: isWindRose ? 'Over the past week the average wind direction has been from the south east.' : 'Low levels of Karenia mikimotoi observed in most areas.',
+        predictionRisk: isWindRose ? 'low' : undefined,
+        predictionWhy: isWindRose ? 'During the summer Dinophysis can bloom out at sea and at shelf fronts found off the West of Shetland. Westerly winds can then blow these blooms into shore. Westerly winds may also retain Dinophysis cells in Westerly facing voes and in lets where their numbers may increase. Wind for the past week has been predominantly from the south east.' : undefined,
+        windRoseMonth: isWindRose ? 'March' : undefined,
+        commentary: isWindRose ? 'Mean wind direction and speed observed in Shetland over the past four weeks. Higher wind speeds are shown in lighter shades.' : undefined,
+        createdAt: new Date().toISOString()
+      });
+    });
+  });
+
+  return sampleReports.sort((a, b) => b.weekNumber - a.weekNumber);
+}
+
+export function extractFormDataFromReport(report?: WeeklyReport, type: BulletinType = BulletinType.DSP) {
+  const defaultForecastDates = [
+    format(addDays(new Date(), 1), 'yyyy-MM-dd'),
+    format(addDays(new Date(), 2), 'yyyy-MM-dd'),
+    format(addDays(new Date(), 3), 'yyyy-MM-dd')
+  ];
+
+  if (!report) {
+    return {
+      date: format(new Date(), 'yyyy-MM-dd'),
+      manualWeekNumber: '' as string | number,
+      manualDateRange: '',
+      toxinMap: '',
+      phytoMap: '',
+      additionalMaps: Array(15).fill(''),
+      mapDates: Array(15).fill(''),
+      forecastDates: defaultForecastDates,
+      biotoxinReport: DEFAULT_ANALYSIS_TEXT.biotoxinReport,
+      biotoxins: { ...DEFAULT_ANALYSIS_TEXT.biotoxins },
+      harmfulAlgaeReport: DEFAULT_ANALYSIS_TEXT.harmfulAlgaeReport,
+      harmfulAlgae: { ...DEFAULT_ANALYSIS_TEXT.harmfulAlgae },
+      trendsForecast: DEFAULT_ANALYSIS_TEXT.trendsForecast,
+      trends: { ...DEFAULT_ANALYSIS_TEXT.trends },
+      commentary: '',
+      kareniaStatus: '',
+      predictionRisk: '',
+      predictionWhy: '',
+      windRoseMonth: '',
+    };
+  }
+
+  const parsedDate = report.startDate ? parseISO(report.startDate) : new Date();
+  const additionalMaps = Array(15).fill('');
+  if (report.additionalMapUrls) {
+    report.additionalMapUrls.forEach((u, i) => {
+      if (i < 15) additionalMaps[i] = u || '';
+    });
+  }
+
+  const mapDates = Array(15).fill('');
+  if (report.mapDates) {
+    report.mapDates.forEach((d, i) => {
+      if (i < 15) mapDates[i] = d || '';
+    });
+  }
+
+  return {
+    date: isValid(parsedDate) ? format(parsedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
+    manualWeekNumber: (report.manualWeekNumber ?? report.weekNumber ?? '') as string | number,
+    manualDateRange: report.manualDateRange ?? '',
+    toxinMap: report.toxinMapUrl || '',
+    phytoMap: report.phytoMapUrl || '',
+    additionalMaps: additionalMaps,
+    mapDates: mapDates,
+    forecastDates: (report.forecastDates && report.forecastDates.length > 0)
+      ? [...report.forecastDates]
+      : defaultForecastDates,
+    biotoxinReport: report.biotoxinReport || DEFAULT_ANALYSIS_TEXT.biotoxinReport,
+    biotoxins: report.biotoxins ? { ...DEFAULT_ANALYSIS_TEXT.biotoxins, ...report.biotoxins } : { ...DEFAULT_ANALYSIS_TEXT.biotoxins },
+    harmfulAlgaeReport: report.harmfulAlgaeReport || DEFAULT_ANALYSIS_TEXT.harmfulAlgaeReport,
+    harmfulAlgae: report.harmfulAlgae ? { ...DEFAULT_ANALYSIS_TEXT.harmfulAlgae, ...report.harmfulAlgae } : { ...DEFAULT_ANALYSIS_TEXT.harmfulAlgae },
+    trendsForecast: report.trendsForecast || DEFAULT_ANALYSIS_TEXT.trendsForecast,
+    trends: report.trends ? { ...DEFAULT_ANALYSIS_TEXT.trends, ...report.trends } : { ...DEFAULT_ANALYSIS_TEXT.trends },
+    commentary: report.commentary || '',
+    kareniaStatus: report.kareniaStatus || '',
+    predictionRisk: report.predictionRisk || '',
+    predictionWhy: report.predictionWhy || '',
+    windRoseMonth: report.windRoseMonth || '',
+  };
+}
+
 export default function App() {
   const [reports, setReports] = useState<WeeklyReport[]>([]);
-  const [activeTab, setActiveTab] = useState('bulletin');
-  const [bulletinType, setBulletinType] = useState<BulletinType>(BulletinType.DSP);
+  const [activeTab, setActiveTabState] = useState(() => {
+    try {
+      return localStorage.getItem('shetland_last_active_tab') || 'bulletin';
+    } catch (e) {
+      return 'bulletin';
+    }
+  });
+
+  const setActiveTab = (tab: string) => {
+    setActiveTabState(tab);
+    try {
+      localStorage.setItem('shetland_last_active_tab', tab);
+    } catch (e) {}
+  };
+
+  const [bulletinType, setBulletinTypeState] = useState<BulletinType>(() => {
+    try {
+      return (localStorage.getItem('shetland_last_bulletin_type') as BulletinType) || BulletinType.DSP;
+    } catch (e) {
+      return BulletinType.DSP;
+    }
+  });
+
   const [editingReport, setEditingReport] = useState<WeeklyReport | null>(null);
 
-  // In-memory draft for Analysis report text, saved across tab switches and browser sessions
+  // In-memory drafts for all categories, persisted in IndexedDB
+  const [categoryDrafts, setCategoryDrafts] = useState<Record<string, any>>({});
+
+  // Analysis draft fallback for backward compatibility
   const [analysisDraft, setAnalysisDraft] = useState(() => {
     try {
       const saved = localStorage.getItem('shetland_analysis_memory_draft');
@@ -136,7 +289,6 @@ export default function App() {
     return DEFAULT_ANALYSIS_TEXT;
   });
 
-  // Sync memory draft to localStorage on change
   useEffect(() => {
     try {
       localStorage.setItem('shetland_analysis_memory_draft', JSON.stringify(analysisDraft));
@@ -145,33 +297,58 @@ export default function App() {
     }
   }, [analysisDraft]);
 
-  const [formData, setFormData] = useState({
-    date: format(new Date(), 'yyyy-MM-dd'),
-    manualWeekNumber: '' as string | number,
-    manualDateRange: '',
-    toxinMap: '',
-    phytoMap: '',
-    additionalMaps: Array(15).fill(''),
-    mapDates: Array(15).fill(''),
-    forecastDates: [
-      format(addDays(new Date(), 1), 'yyyy-MM-dd'),
-      format(addDays(new Date(), 2), 'yyyy-MM-dd'),
-      format(addDays(new Date(), 3), 'yyyy-MM-dd')
-    ],
-    biotoxinReport: analysisDraft.biotoxinReport,
-    biotoxins: { ...analysisDraft.biotoxins },
-    harmfulAlgaeReport: analysisDraft.harmfulAlgaeReport,
-    harmfulAlgae: { ...analysisDraft.harmfulAlgae },
-    trendsForecast: analysisDraft.trendsForecast,
-    trends: { ...analysisDraft.trends },
-    commentary: '',
-    kareniaStatus: '',
-    predictionRisk: '',
-    predictionWhy: '',
-    windRoseMonth: '',
-  });
+  const [formData, setFormData] = useState(() => extractFormDataFromReport(undefined, bulletinType));
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const bulletinRef = useRef<HTMLDivElement>(null);
+
+  // Wrapped updater for formData that also persists to categoryDrafts and IndexedDB immediately
+  const handleSetFormData = (updater: any) => {
+    setFormData(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      setCategoryDrafts(prevDrafts => {
+        const updatedDrafts = { ...prevDrafts, [bulletinType]: next };
+        set('shetland_category_drafts_db', updatedDrafts).catch(console.error);
+        return updatedDrafts;
+      });
+      return next;
+    });
+  };
+
+  // Safe switching of bulletin categories: preserves current draft and loads the target category draft
+  const handleSwitchBulletinType = (newType: BulletinType) => {
+    if (newType === bulletinType) return;
+
+    // 1. Save current form draft for active bulletinType
+    setCategoryDrafts(prevDrafts => {
+      const updatedDrafts = { ...prevDrafts, [bulletinType]: formData };
+      set('shetland_category_drafts_db', updatedDrafts).catch(console.error);
+
+      // 2. Find target draft for newType
+      let targetDraft = updatedDrafts[newType];
+      if (!targetDraft || (!targetDraft.toxinMap && !targetDraft.phytoMap && !targetDraft.additionalMaps?.some((m: string) => !!m) && !targetDraft.biotoxinReport)) {
+        const latestOfType = reports
+          .filter(r => r.type === newType)
+          .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())[0];
+        if (latestOfType) {
+          targetDraft = extractFormDataFromReport(latestOfType, newType);
+          updatedDrafts[newType] = targetDraft;
+          set('shetland_category_drafts_db', updatedDrafts).catch(console.error);
+        } else {
+          targetDraft = extractFormDataFromReport(undefined, newType);
+        }
+      }
+
+      setFormData(targetDraft);
+      return updatedDrafts;
+    });
+
+    setBulletinTypeState(newType);
+    try {
+      localStorage.setItem('shetland_last_bulletin_type', newType);
+    } catch (e) {}
+    setSelectedReportId(null);
+    setEditingReport(null);
+  };
 
   const bulletinConfig = {
     [BulletinType.DSP]: {
@@ -317,66 +494,18 @@ export default function App() {
     formData.trends
   ]);
 
-  // When changing bulletin type, ensure analysis text is kept in memory and not erased
-  useEffect(() => {
-    if (!editingReport) {
-      if (bulletinType === BulletinType.ANALYSIS) {
-        // Pre-fill with the latest analysis report if available, otherwise preserve in-memory draft
-        const latestAnalysis = reports
-          .filter(r => r.type === BulletinType.ANALYSIS)
-          .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())[0];
-
-        if (latestAnalysis) {
-          setFormData(prev => ({
-            ...prev,
-            manualWeekNumber: latestAnalysis.manualWeekNumber ?? latestAnalysis.weekNumber ?? prev.manualWeekNumber,
-            manualDateRange: latestAnalysis.manualDateRange || prev.manualDateRange,
-            date: latestAnalysis.startDate ? format(parseISO(latestAnalysis.startDate), 'yyyy-MM-dd') : prev.date,
-            biotoxinReport: prev.biotoxinReport || latestAnalysis.biotoxinReport || analysisDraft.biotoxinReport,
-            biotoxins: prev.biotoxins?.asp ? prev.biotoxins : (latestAnalysis.biotoxins || analysisDraft.biotoxins),
-            harmfulAlgaeReport: prev.harmfulAlgaeReport || latestAnalysis.harmfulAlgaeReport || analysisDraft.harmfulAlgaeReport,
-            harmfulAlgae: prev.harmfulAlgae?.alexandrium ? prev.harmfulAlgae : (latestAnalysis.harmfulAlgae || analysisDraft.harmfulAlgae),
-            trendsForecast: prev.trendsForecast || latestAnalysis.trendsForecast || analysisDraft.trendsForecast,
-            trends: prev.trends?.alexandriumPsp ? prev.trends : (latestAnalysis.trends || analysisDraft.trends)
-          }));
-        } else {
-          setFormData(prev => ({
-            ...prev,
-            biotoxinReport: prev.biotoxinReport || analysisDraft.biotoxinReport,
-            biotoxins: prev.biotoxins?.asp ? prev.biotoxins : analysisDraft.biotoxins,
-            harmfulAlgaeReport: prev.harmfulAlgaeReport || analysisDraft.harmfulAlgaeReport,
-            harmfulAlgae: prev.harmfulAlgae?.alexandrium ? prev.harmfulAlgae : analysisDraft.harmfulAlgae,
-            trendsForecast: prev.trendsForecast || analysisDraft.trendsForecast,
-            trends: prev.trends?.alexandriumPsp ? prev.trends : analysisDraft.trends
-          }));
-        }
-      } else {
-        resetForm(true);
-      }
-    }
-  }, [bulletinType]);
-
   const startEditingAnalysis = (targetSection?: 'biotoxin' | 'harmfulAlgae' | 'trends') => {
     // Determine the report to edit: currently viewed report, or latest analysis report
     const targetReport = (latestReport && latestReport.type === BulletinType.ANALYSIS)
       ? latestReport
       : reports.filter(r => r.type === BulletinType.ANALYSIS).sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())[0];
 
+    handleSwitchBulletinType(BulletinType.ANALYSIS);
+
     if (targetReport) {
       setEditingReport(targetReport);
-      const parsedDate = targetReport.startDate ? parseISO(targetReport.startDate) : new Date();
-      setFormData(prev => ({
-        ...prev,
-        date: isValid(parsedDate) ? format(parsedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
-        manualWeekNumber: targetReport.manualWeekNumber ?? targetReport.weekNumber ?? '',
-        manualDateRange: targetReport.manualDateRange ?? '',
-        biotoxinReport: targetReport.biotoxinReport ?? analysisDraft.biotoxinReport,
-        biotoxins: targetReport.biotoxins ?? analysisDraft.biotoxins,
-        harmfulAlgaeReport: targetReport.harmfulAlgaeReport ?? analysisDraft.harmfulAlgaeReport,
-        harmfulAlgae: targetReport.harmfulAlgae ?? analysisDraft.harmfulAlgae,
-        trendsForecast: targetReport.trendsForecast ?? analysisDraft.trendsForecast,
-        trends: targetReport.trends ?? analysisDraft.trends,
-      }));
+      const data = extractFormDataFromReport(targetReport, BulletinType.ANALYSIS);
+      setFormData(data);
     } else {
       setFormData(prev => ({
         ...prev,
@@ -389,7 +518,6 @@ export default function App() {
       }));
     }
 
-    setBulletinType(BulletinType.ANALYSIS);
     setActiveTab('admin');
 
     if (targetSection) {
@@ -406,35 +534,76 @@ export default function App() {
     }
   };
 
-  // Load from database on mount
+  // Load from database on mount: restores reports, category drafts, and last state
   useEffect(() => {
     async function loadData() {
       try {
-        // Try IndexedDB first
+        // 1. Try IndexedDB first
         let savedReports = await get<WeeklyReport[]>('shetland_reports_db');
         
         // Fallback to localStorage for legacy data migration
-        if (!savedReports) {
+        if (!savedReports || savedReports.length === 0) {
           const legacy = localStorage.getItem('shetland_reports');
           if (legacy) {
-            savedReports = JSON.parse(legacy);
-            // Move legacy data to IDB
-            await set('shetland_reports_db', savedReports);
-            localStorage.removeItem('shetland_reports');
-            console.log('Migrated legacy localStorage data to IndexedDB');
+            try {
+              savedReports = JSON.parse(legacy);
+              await set('shetland_reports_db', savedReports);
+              localStorage.removeItem('shetland_reports');
+            } catch (e) {
+              console.warn('Failed to parse legacy localStorage reports', e);
+            }
           }
         }
 
-        if (savedReports) {
-          const migrated = savedReports.map((r: any) => ({
-            ...r,
-            type: r.type || BulletinType.DSP,
-            targetDate: r.targetDate || r.startDate
-          }));
-          setReports(migrated);
+        // If no historical reports exist at all, auto-populate sample reports so all pages have initial data
+        if (!savedReports || savedReports.length === 0) {
+          savedReports = generateSampleReports();
+          await set('shetland_reports_db', savedReports);
         }
+
+        const migrated = (savedReports || []).map((r: any) => ({
+          ...r,
+          type: r.type || BulletinType.DSP,
+          targetDate: r.targetDate || r.startDate
+        }));
+        setReports(migrated);
+
+        // 2. Load persistent in-memory drafts across all categories
+        let savedDrafts = await get<Record<string, any>>('shetland_category_drafts_db');
+        if (!savedDrafts) {
+          savedDrafts = {};
+        }
+
+        const allTypes = Object.values(BulletinType);
+        const resolvedDrafts: Record<string, any> = { ...savedDrafts };
+
+        for (const bType of allTypes) {
+          const existingDraft = resolvedDrafts[bType];
+          const hasContent = existingDraft && (
+            existingDraft.toxinMap || 
+            existingDraft.phytoMap || 
+            existingDraft.additionalMaps?.some((m: string) => !!m) || 
+            existingDraft.commentary ||
+            existingDraft.biotoxinReport
+          );
+
+          if (!hasContent) {
+            const latestRep = migrated
+              .filter(r => r.type === bType)
+              .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())[0];
+            resolvedDrafts[bType] = extractFormDataFromReport(latestRep, bType as BulletinType);
+          }
+        }
+
+        setCategoryDrafts(resolvedDrafts);
+        await set('shetland_category_drafts_db', resolvedDrafts);
+
+        // Populate active form data from the resolved category draft
+        const activeDraft = resolvedDrafts[bulletinType] || extractFormDataFromReport(undefined, bulletinType);
+        setFormData(activeDraft);
+
       } catch (e) {
-        console.error('Failed to load reports from storage', e);
+        console.error('Failed to load reports and drafts from storage', e);
       }
     }
     loadData();
@@ -445,7 +614,6 @@ export default function App() {
     // We always save the reports array, even if empty, so that deletions persist
     set('shetland_reports_db', reports).catch(e => {
       console.error('Failed to save to IndexedDB', e);
-      // Only show error toast if it's a real failure, not just initial state
       if (reports.length > 0) {
         toast.error('Failed to save reports. Storage might be full.');
       }
@@ -477,10 +645,8 @@ export default function App() {
         const getRepYear = (r: WeeklyReport) => new Date(r.startDate).getFullYear();
 
         if (item.type === BulletinType.SST || item.type === BulletinType.SSC) {
-          // Environmental reports are locked to the specific day
           filtered = filtered.filter(r => !(r.type === item.type && r.targetDate === item.targetDate));
         } else {
-          // Toxin and Wind Rose reports check week number and year
           filtered = filtered.filter(r => !(
             r.type === item.type &&
             getRepWeek(r) === getRepWeek(item) &&
@@ -496,6 +662,14 @@ export default function App() {
       });
     });
     
+    // Update in-memory draft for this category and persist to IndexedDB
+    const savedDraft = extractFormDataFromReport(report, report.type);
+    setCategoryDrafts(prevDrafts => {
+      const updatedDrafts = { ...prevDrafts, [report.type]: savedDraft };
+      set('shetland_category_drafts_db', updatedDrafts).catch(console.error);
+      return updatedDrafts;
+    });
+
     if (report.type === BulletinType.ANALYSIS) {
       setAnalysisDraft({
         biotoxinReport: report.biotoxinReport || '',
@@ -517,9 +691,9 @@ export default function App() {
       });
     }
     
+    setFormData(savedDraft);
     setSelectedReportId(report.id);
-    resetForm(true);
-    toast.success('Report and maps saved successfully');
+    toast.success('Report and maps saved in memory');
     setActiveTab('bulletin');
   };
 
@@ -564,6 +738,14 @@ export default function App() {
       });
     });
 
+    // Update in-memory draft for this category and persist to IndexedDB
+    const updatedDraft = extractFormDataFromReport(updatedReport, updatedReport.type);
+    setCategoryDrafts(prevDrafts => {
+      const updatedDrafts = { ...prevDrafts, [updatedReport.type]: updatedDraft };
+      set('shetland_category_drafts_db', updatedDrafts).catch(console.error);
+      return updatedDrafts;
+    });
+
     if (updatedReport.type === BulletinType.ANALYSIS) {
       setAnalysisDraft({
         biotoxinReport: updatedReport.biotoxinReport || '',
@@ -585,16 +767,14 @@ export default function App() {
       });
     }
 
+    setFormData(updatedDraft);
     setSelectedReportId(updatedReport.id || null);
     setEditingReport(null);
-    resetForm(true);
-    toast.success('Report updated successfully');
+    toast.success('Report updated and draft saved in memory');
     setActiveTab('bulletin');
   };
 
   const deleteReport = (id: string) => {
-    // window.confirm can be blocked in some iframe environments
-    // We'll perform the deletion directly and notify the user via toast
     setReports(prev => prev.filter(r => r.id !== id));
     toast.info('Report deleted permanently');
   };
@@ -602,93 +782,34 @@ export default function App() {
   const clearAllData = () => {
     if (window.confirm('Are you sure you want to delete ALL historical data? This cannot be undone.')) {
       setReports([]);
+      setCategoryDrafts({});
       localStorage.removeItem('shetland_reports');
       del('shetland_reports_db').catch(console.error);
+      del('shetland_category_drafts_db').catch(console.error);
+      const blank = extractFormDataFromReport(undefined, bulletinType);
+      setFormData(blank);
       toast.info('All data cleared');
     }
   };
 
-  const loadSampleData = () => {
-    const types = Object.values(BulletinType);
-    const sampleReports: WeeklyReport[] = [];
-    
-    // Base Monday for week 12 (March 16, 2026)
-    const baseWeek12Monday = new Date(2026, 2, 16);
-    
-    types.forEach(type => {
-      [12, 13, 14, 15, 16].forEach(num => {
-        const weekOffset = num - 12;
-        const start = addWeeks(baseWeek12Monday, weekOffset);
-        const end = addDays(start, 6);
-        const startIso = format(start, "yyyy-MM-dd'T'00:00:00'Z'");
-        const endIso = format(end, "yyyy-MM-dd'T'00:00:00'Z'");
-        const isWindRose = type === BulletinType.WIND_ROSE;
-        
-        sampleReports.push({
-          id: `sample-${type}-${num}`,
-          type: type as BulletinType,
-          weekNumber: num,
-          startDate: startIso,
-          endDate: endIso,
-          targetDate: startIso,
-          toxinMapUrl: `https://picsum.photos/seed/${type}-toxin-${num}/400/400`,
-          phytoMapUrl: `https://picsum.photos/seed/${type}-phyto-${num}/400/400`,
-          additionalMapUrls: Array.from({ length: 12 }).map((_, i) => 
-            `https://picsum.photos/seed/${type}-add${i+1}-${num}/400/400`
-          ),
-          forecastDates: type === BulletinType.FORECAST ? [
-            format(addDays(start, 1), 'yyyy-MM-dd'),
-            format(addDays(start, 2), 'yyyy-MM-dd'),
-            format(addDays(start, 3), 'yyyy-MM-dd')
-          ] : undefined,
-          biotoxinReport: type === BulletinType.ANALYSIS 
-            ? 'All classified harvesting zones remain within safe statutory limits. Routine liquid chromatography testing confirms that OA, DTX, PTX, AZA, and YTX levels remain well below regulatory maximum permitted concentrations. No harvesting closures are indicated.' 
-            : undefined,
-          biotoxins: type === BulletinType.ANALYSIS ? {
-            asp: 'Not detected (< 1.0 mg/kg) across all monitoring zones',
-            aza: 'Trace concentrations detected in West Mainland (< 16 µg/kg), well below 160 µg/kg limit',
-            dsp: 'Below regulatory limit of 160 µg/kg OA equiv. Maximum recorded 32 µg/kg in Clift Sound',
-            psp: 'Below Limit of Quantification (LOQ) at all Shetland monitoring stations',
-            ytx: 'Not detected (< 0.1 mg/kg YTX equivalents)'
-          } : undefined,
-          harmfulAlgaeReport: type === BulletinType.ANALYSIS
-            ? 'Phytoplankton cell counts remain in typical baseline ranges. No cell count warnings or threshold breaches recorded for Alexandrium, Dinophysis, or Pseudo-nitzschia species. Water column stratification remains weak with low risk of bloom development.'
-            : undefined,
-          harmfulAlgae: type === BulletinType.ANALYSIS ? {
-            alexandrium: '< 20 cells/L (Below threshold at all monitoring stations)',
-            dinophysis: 'Present at low levels (max 40 cells/L in Vaila Sound, below 100 cells/L threshold)',
-            karenia: 'Not detected in surface or integrated column samples',
-            prorocentrum: '< 40 cells/L (Below threshold levels)',
-            pseudoDelicatissima: 'Background densities (< 5,000 cells/L)',
-            pseudoSeriata: '< 2,000 cells/L across all monitored voes'
-          } : undefined,
-          trendsForecast: type === BulletinType.ANALYSIS
-            ? 'Overall low risk across all aquaculture and wild harvesting sites. Hydrographic conditions, tidal flushing, and offshore wind regimes suggest minimal advective risk of harmful algal transport into coastal voes over the upcoming week.'
-            : undefined,
-          trends: type === BulletinType.ANALYSIS ? {
-            alexandriumPsp: 'Water temperatures remain below optimal bloom initiation thresholds (current SST 8.2°C). Low risk of PSP events expected for the coming fortnight.',
-            dinophysisDsp: 'Low cell densities persist offshore. Recent wind patterns indicate minimal onshore transport. Risk remains low to moderate in sheltered southwest voes.',
-            pseudoNitzschiaAsp: 'Diatom populations dominated by non-toxic species. Pseudo-nitzschia numbers well below the 50,000 cells/L action threshold.',
-            azaYtx: 'Azadinium and Protoceratium cell concentrations remain negligible. Historical trends suggest low probability of toxic events in early spring.',
-            riskPsp: 'Low',
-            riskDsp: 'Low to Moderate',
-            riskAsp: 'Low',
-            riskYtx: 'Low',
-            riskAza: 'Low'
-          } : undefined,
-          kareniaStatus: isWindRose ? 'Over the past week the average wind direction has been from the south east.' : 'Low levels of Karenia mikimotoi observed in most areas.',
-          predictionRisk: isWindRose ? 'low' : undefined,
-          predictionWhy: isWindRose ? 'During the summer Dinophysis can bloom out at sea and at shelf fronts found off the West of Shetland. Westerly winds can then blow these blooms into shore. Westerly winds may also retain Dinophysis cells in Westerly facing voes and in lets where their numbers may increase. Wind for the past week has been predominantly from the south east.' : undefined,
-          windRoseMonth: isWindRose ? 'March' : undefined,
-          commentary: isWindRose ? 'Mean wind direction and speed observed in Shetland over the past four weeks. Higher wind speeds are shown in lighter shades.' : undefined,
-          createdAt: new Date().toISOString()
-        });
-      });
-    });
-    
-    const sorted = sampleReports.sort((a, b) => b.weekNumber - a.weekNumber);
-    setReports(sorted);
-    const sampleAnalysis = sorted.find(r => r.type === BulletinType.ANALYSIS);
+  const loadSampleData = async () => {
+    const sampleReports = generateSampleReports();
+    setReports(sampleReports);
+    await set('shetland_reports_db', sampleReports);
+
+    const allTypes = Object.values(BulletinType);
+    const freshDrafts: Record<string, any> = {};
+    for (const bType of allTypes) {
+      const latestRep = sampleReports.find(r => r.type === bType);
+      freshDrafts[bType] = extractFormDataFromReport(latestRep, bType as BulletinType);
+    }
+    setCategoryDrafts(freshDrafts);
+    await set('shetland_category_drafts_db', freshDrafts);
+
+    const activeDraft = freshDrafts[bulletinType] || extractFormDataFromReport(undefined, bulletinType);
+    setFormData(activeDraft);
+
+    const sampleAnalysis = sampleReports.find(r => r.type === BulletinType.ANALYSIS);
     if (sampleAnalysis) {
       setAnalysisDraft({
         biotoxinReport: sampleAnalysis.biotoxinReport || '',
@@ -699,7 +820,7 @@ export default function App() {
         trends: sampleAnalysis.trends || DEFAULT_ANALYSIS_TEXT.trends
       });
     }
-    toast.success('Sample data loaded for all categories');
+    toast.success('Sample data and maps loaded for all pages');
   };
 
   const exportToPDF = async () => {
@@ -964,8 +1085,27 @@ export default function App() {
             });
           });
           
+          // Also sync into in-memory category draft
+          const offset = 3 - colIdx;
+          handleSetFormData((prev: any) => {
+            if (offset === 0) {
+              return {
+                ...prev,
+                [mapType === 'toxin' ? 'toxinMap' : 'phytoMap']: compressed
+              };
+            } else {
+              const addMaps = [...(prev.additionalMaps || Array(15).fill(''))];
+              const slot = (offset - 1) * 2 + (mapType === 'toxin' ? 0 : 1);
+              addMaps[slot] = compressed;
+              return {
+                ...prev,
+                additionalMaps: addMaps
+              };
+            }
+          });
+
           toast.dismiss('quick-upload');
-          toast.success(`Week ${weekNum} ${mapType === 'toxin' ? 'toxin' : 'phytoplankton'} map updated!`);
+          toast.success(`Week ${weekNum} ${mapType === 'toxin' ? 'toxin' : 'phytoplankton'} map updated in memory!`);
         } catch (err) {
           toast.dismiss('quick-upload');
           toast.error('Failed to process image');
@@ -1010,8 +1150,7 @@ export default function App() {
                 <select 
                   value={bulletinType} 
                   onChange={(e) => {
-                    setBulletinType(e.target.value as BulletinType);
-                    setSelectedReportId(null);
+                    handleSwitchBulletinType(e.target.value as BulletinType);
                   }}
                   className="px-3 py-1 bg-transparent border-none text-xs font-bold uppercase tracking-tight focus:outline-none focus:ring-0 cursor-pointer hover:text-blue-600 transition-colors"
                 >
@@ -2071,13 +2210,15 @@ export default function App() {
               reports={reports}
               onCancel={() => {
                 setEditingReport(null);
+                const saved = categoryDrafts[bulletinType] || extractFormDataFromReport(undefined, bulletinType);
+                setFormData(saved);
                 setActiveTab('history');
               }}
               bulletinType={bulletinType}
               topLabel={bulletinConfig[bulletinType].topLabel}
               bottomLabel={bulletinConfig[bulletinType].bottomLabel}
               formData={formData}
-              setFormData={setFormData}
+              setFormData={handleSetFormData}
             />
           </TabsContent>
         </Tabs>
@@ -2454,17 +2595,41 @@ function AddWeekForm({
     <Card className="max-w-2xl mx-auto shadow-md border-slate-200">
       <CardHeader className="flex flex-row items-center justify-between">
         <div className="space-y-1">
-          <CardTitle>{editingReport ? 'Edit Weekly Report' : 'Add New Weekly Report'}</CardTitle>
+          <div className="flex items-center gap-2.5">
+            <CardTitle>{editingReport ? 'Edit Weekly Report' : 'Add New Weekly Report'}</CardTitle>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Auto-saved in memory
+            </span>
+          </div>
           {!editingReport && (
-            <p className="text-xs text-slate-500 uppercase font-semibold">Creating {bulletinType} Report</p>
+            <p className="text-xs text-slate-500 uppercase font-semibold">Creating {bulletinType} Report • Maps & text auto-persist across sessions</p>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           {!editingReport && (
-            <Button variant="outline" size="sm" onClick={loadLatestMaps} type="button">
-              <History className="w-4 h-4 mr-2" />
-              Reuse Latest Maps
-            </Button>
+            <>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                type="button" 
+                onClick={() => {
+                  if (window.confirm(`Clear inputs and maps for ${bulletinType}? This resets the current draft for this page.`)) {
+                    const blank = extractFormDataFromReport(undefined, bulletinType);
+                    setFormData(blank);
+                    toast.info(`Cleared inputs for ${bulletinType}`);
+                  }
+                }}
+                className="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200"
+              >
+                <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
+                Clear Page
+              </Button>
+              <Button variant="outline" size="sm" onClick={loadLatestMaps} type="button">
+                <History className="w-4 h-4 mr-2" />
+                Reuse Latest Maps
+              </Button>
+            </>
           )}
           {editingReport && (
             <Button variant="outline" size="sm" onClick={onCancel}>Cancel Edit</Button>
